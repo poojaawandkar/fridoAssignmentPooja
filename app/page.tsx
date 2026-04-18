@@ -6,6 +6,7 @@ import Hero from "@/components/Hero";
 import CategoryTabs from "@/components/CategoryTabs";
 import ProductGrid from "@/components/ProductGrid";
 import { ToastProvider, showToast } from "@/components/Toast";
+import QuickViewModal from "@/components/QuickViewModal";
 import { getProductsByCollection } from "@/lib/shopify";
 import type { Mode, ShopifyProduct } from "@/types";
 
@@ -14,6 +15,8 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<string>("sleep");
   const [products, setProducts] = useState<ShopifyProduct[]>([]);
   const [loading, setLoading] = useState(false);
+  const [quickViewProduct, setQuickViewProduct] = useState<ShopifyProduct | null>(null);
+  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
 
   // Initialize category based on mode
   useEffect(() => {
@@ -66,6 +69,16 @@ export default function Home() {
   const handleAddToCart = (productId: string, variantId: string) => {
     console.log("Added to cart:", { productId, variantId });
     showToast("Product added to cart!", "success");
+  };
+
+  const handleQuickView = (product: ShopifyProduct) => {
+    setQuickViewProduct(product);
+    setIsQuickViewOpen(true);
+  };
+
+  const handleCloseQuickView = () => {
+    setIsQuickViewOpen(false);
+    setQuickViewProduct(null);
   };
 
   return (
@@ -121,6 +134,7 @@ export default function Home() {
                 products={products}
                 loading={loading}
                 onAddToCart={handleAddToCart}
+                onQuickView={handleQuickView}
               />
             </motion.div>
           </AnimatePresence>
@@ -185,6 +199,14 @@ export default function Home() {
           </div>
         </div>
       </motion.footer>
+
+      {/* Quick View Modal */}
+      <QuickViewModal
+        product={quickViewProduct}
+        isOpen={isQuickViewOpen}
+        onClose={handleCloseQuickView}
+        onAddToCart={handleAddToCart}
+      />
     </div>
     </ToastProvider>
   );

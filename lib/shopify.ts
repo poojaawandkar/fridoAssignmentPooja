@@ -242,3 +242,77 @@ export function formatPrice(amount: string | number): string {
   const num = parseFloat(String(amount));
   return `$${num.toFixed(2)}`;
 }
+
+// Fetch single product by handle from Shopify Storefront API
+export async function getProductByHandle(handle: string): Promise<ShopifyProduct | null> {
+  const query = {
+    query: `
+      query GetProductByHandle($handle: String!) {
+        product(handle: $handle) {
+          id
+          title
+          handle
+          description
+          descriptionHtml
+          featuredImage {
+            url
+            altText
+          }
+          priceRange {
+            minVariantPrice {
+              amount
+              currencyCode
+            }
+          }
+          compareAtPriceRange {
+            minVariantPrice {
+              amount
+              currencyCode
+            }
+          }
+          variants(first: 10) {
+            edges {
+              node {
+                id
+                title
+                price {
+                  amount
+                  currencyCode
+                }
+                compareAtPrice {
+                  amount
+                  currencyCode
+                }
+                availableForSale
+                quantityAvailable
+              }
+            }
+          }
+          tags
+          images(first: 5) {
+            edges {
+              node {
+                url
+                altText
+              }
+            }
+          }
+        }
+      }
+    `,
+    variables: {
+      handle,
+    },
+  };
+
+  try {
+    const response = await shopifyFetch<{ product: ShopifyProduct }>(query);
+    if (response.data?.product) {
+      return response.data.product;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error fetching product by handle:", error);
+    return null;
+  }
+}

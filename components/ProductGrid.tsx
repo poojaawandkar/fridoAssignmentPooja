@@ -8,12 +8,14 @@ interface ProductGridProps {
   products: ShopifyProduct[];
   loading?: boolean;
   onAddToCart: (productId: string, variantId: string) => void;
+  onQuickView: (product: ShopifyProduct) => void;
 }
 
 export default function ProductGrid({
   products,
   loading = false,
   onAddToCart,
+  onQuickView,
 }: ProductGridProps) {
   if (loading) {
     return (
@@ -62,6 +64,7 @@ export default function ProductGrid({
           key={product.id}
           product={product}
           onAddToCart={onAddToCart}
+          onQuickView={onQuickView}
           index={index}
         />
       ))}

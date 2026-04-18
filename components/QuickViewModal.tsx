@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { formatPrice, calculateDiscount } from "@/lib/shopify";
@@ -22,15 +22,39 @@ export default function QuickViewModal({
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
   const [quantity, setQuantity] = useState(1);
 
+  // Reset variant when product changes
   useEffect(() => {
     if (product?.variants?.edges?.[0]) {
       setSelectedVariant(product.variants.edges[0].node);
     }
   }, [product]);
 
-  if (!product) return null;
+  // Close on escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) {
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [isOpen, onClose]);
 
-  const currentPrice = selectedVariant?.price?.amount || product.priceRange.minVariantPrice.amount;
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !product) return null;
+
+  const currentPrice = selectedVariant?.price?.amount || product.priceRange?.minVariantPrice?.amount || "0";
   const compareAtPrice = selectedVariant?.compareAtPrice?.amount;
   const discount = calculateDiscount(compareAtPrice, currentPrice);
 
@@ -41,43 +65,58 @@ export default function QuickViewModal({
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+    <>
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+      />
+
+      {/* Modal */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        transition={{ type: "spring", duration: 0.5 }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col md:flex-row relative"
+        >
+          {/* Close Button */}
+          <button
             onClick={onClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
-          />
-
-          {/* Modal */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ type: "spring", duration: 0.5 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center hover:bg-gray-100 transition-colors text-lg font-bold"
           >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col md:flex-row"
-            >
-              {/* Close Button */}
-              <button
-                onClick={onClose}
-                className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center hover:bg-gray-100 transition-colors"
-              >
-                ✕
-              </button>
+            ✕
+          </button>
 
-              {/* Image Section */}
-              <div className="w-full md:w-1/2 h-64 md:h-auto relative bg-gray-100">
-                {product.featuredImage?.url ? (
-                  <Image
-                    src={product.featuredImage.url}
+          {/* Image Section */}
+          <div className="w-full md:w-1/2 h-64 md:h-[500px] relative bg-gray-100">
+            {product.featuredImage?.url ? (
+              <Image
+                src={product.featuredImage.url}
+                alt={product.title || "Product"}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 50vw"
+                priority
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-400">
+                No Image
+              </div>
+            )}
+            {discount > 0 && (
+              <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold">
+                -{discount}% OFF
+              </div>
+            )}
+          </div>
                     alt={product.title}
                     fill
                     className="object-cover"
@@ -182,13 +221,13 @@ export default function QuickViewModal({
                 {/* Add to Cart */}
                 <button
                   onClick={handleAddToCart}
-                  className="w-full bg-gradient-to-r from-pink-500 to-red-500 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  className="w-full bg-linear-to-r from-pink-500 to-red-500 text-white py-4 rounded-xl font-bold text-lg hover:shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
                   🛒 Add to Cart
                 </button>
 
                 {/* Extra Info */}
-                <div className="mt-4 flex items-center justify-center gap-6 text-sm text-gray-500">
+                <div className="mt-4 flex items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-gray-500 flex-wrap">
                   <span className="flex items-center gap-1">✓ In Stock</span>
                   <span className="flex items-center gap-1">🚚 Free Shipping</span>
                   <span className="flex items-center gap-1">↩️ Easy Returns</span>
@@ -196,8 +235,6 @@ export default function QuickViewModal({
               </div>
             </div>
           </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+      </>
   );
 }
